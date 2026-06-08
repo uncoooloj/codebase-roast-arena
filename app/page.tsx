@@ -429,13 +429,34 @@ export default function Home() {
           <div className="panel-header">
             <div>
               <span className="panel-label">Evidence intake</span>
-              <h2>Paste the accused code</h2>
+              <h2>Start with a GitHub URL</h2>
+              <p className="panel-subcopy">Load a public repo, folder, or file. Manual paste is the fallback.</p>
             </div>
             <select value={language} onChange={(event) => setLanguage(event.target.value)} aria-label="Language">
               {languages.map((item) => (
                 <option key={item}>{item}</option>
               ))}
             </select>
+          </div>
+
+          <div className="github-intake primary-intake">
+            <div className="github-prompt">
+              <strong>GitHub case file</strong>
+              <span>Repo, tree, blob, or raw URL</span>
+            </div>
+            <input
+              value={githubUrl}
+              onChange={(event) => setGithubUrl(event.target.value)}
+              placeholder="https://github.com/owner/repo"
+              aria-label="GitHub URL"
+            />
+            <button type="button" onClick={loadGithubUrl} disabled={isFetchingGithub}>
+              {isFetchingGithub ? "Loading..." : "Load GitHub"}
+            </button>
+          </div>
+
+          <div className="manual-divider">
+            <span>or paste code manually</span>
           </div>
 
           <textarea
@@ -445,18 +466,6 @@ export default function Home() {
             spellCheck={false}
             aria-label="Code input"
           />
-
-          <div className="github-intake">
-            <input
-              value={githubUrl}
-              onChange={(event) => setGithubUrl(event.target.value)}
-              placeholder="https://github.com/owner/repo or /blob/main/file.ts"
-              aria-label="GitHub URL"
-            />
-            <button type="button" onClick={loadGithubUrl} disabled={isFetchingGithub}>
-              {isFetchingGithub ? "Loading GitHub..." : "Load GitHub URL"}
-            </button>
-          </div>
 
           <div className="sample-row">
             <button type="button" onClick={() => setCode(cursedCheckout)}>

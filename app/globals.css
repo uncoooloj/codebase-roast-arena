@@ -402,6 +402,15 @@ h1 {
   line-height: 1.08;
 }
 
+.panel-subcopy {
+  max-width: 420px;
+  margin: 7px 0 0;
+  color: #cde7ff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 select {
   height: 38px;
   min-width: 138px;
@@ -415,7 +424,7 @@ select {
 .code-editor {
   flex: 1;
   width: 100%;
-  min-height: 440px;
+  min-height: 310px;
   resize: none;
   border: 2px solid #2a5bff;
   border-radius: 4px;
@@ -446,14 +455,45 @@ select {
 
 .github-intake {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(130px, 0.38fr) minmax(0, 1fr) auto;
   gap: 8px;
-  margin-top: 12px;
+  margin: 0 0 12px;
+}
+
+.primary-intake {
+  border: 2px solid #ffd400;
+  border-radius: 4px;
+  background:
+    radial-gradient(circle at 10% 50%, rgba(255, 212, 0, 0.2), transparent 34%),
+    #03050b;
+  padding: 10px;
+  box-shadow:
+    4px 4px 0 #ff4fbd,
+    inset 0 0 0 1px rgba(255, 245, 189, 0.16);
+}
+
+.github-prompt {
+  display: grid;
+  align-content: center;
+  border-right: 1px dotted rgba(255, 212, 0, 0.5);
+  padding-right: 8px;
+  text-transform: uppercase;
+}
+
+.github-prompt strong {
+  color: #ffd400;
+  font-size: 12px;
+}
+
+.github-prompt span {
+  color: #b9ff5c;
+  font-size: 10px;
+  font-weight: 900;
 }
 
 .github-intake input {
   min-width: 0;
-  min-height: 38px;
+  min-height: 48px;
   border: 2px solid #2a5bff;
   border-radius: 4px;
   color: #fff5bd;
@@ -464,7 +504,7 @@ select {
 }
 
 .github-intake button {
-  min-height: 38px;
+  min-height: 48px;
   border: 2px solid #ffd400;
   border-radius: 4px;
   color: #050607;
@@ -474,6 +514,26 @@ select {
   font-weight: 950;
   text-transform: uppercase;
   box-shadow: 3px 3px 0 #ff4fbd;
+}
+
+.manual-divider {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: center;
+  margin: 6px 0 10px;
+  color: #cde7ff;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.manual-divider::before,
+.manual-divider::after {
+  content: "";
+  height: 2px;
+  background-image: radial-gradient(circle, #ffd400 2px, transparent 3px);
+  background-size: 14px 2px;
 }
 
 .sample-row button,
@@ -1103,6 +1163,12 @@ select {
 
   .github-intake {
     grid-template-columns: 1fr;
+  }
+
+  .github-prompt {
+    border-right: 0;
+    border-bottom: 1px dotted rgba(255, 212, 0, 0.5);
+    padding: 0 0 8px;
   }
 
   .panel-header {
