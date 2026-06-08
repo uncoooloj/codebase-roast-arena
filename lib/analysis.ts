@@ -116,6 +116,39 @@ function addCharge(charges: Charge[], charge: Charge) {
   }
 }
 
+function splitEvidenceUnits(code: string) {
+  const lines = code.split(/\r?\n/);
+  const units: Array<{ name: string; code: string; lines: string[]; meaningfulLines: string[] }> = [];
+  let currentName = "pasted snippet";
+  let currentLines: string[] = [];
+
+  function pushUnit() {
+    if (!currentLines.some((line) => line.trim())) return;
+    units.push({
+      name: currentName,
+      code: currentLines.join("\n"),
+      lines: currentLines,
+      meaningfulLines: currentLines.filter((line) => line.trim().length > 0),
+    });
+  }
+
+  for (const line of lines) {
+    const fileHeader = line.match(/^\/\/\s+[\w.-]+\/[\w.-]+\/(.+)$/);
+    if (fileHeader) {
+      pushUnit();
+      currentName = fileHeader[1];
+      currentLines = [];
+      continue;
+    }
+
+    currentLines.push(line);
+  }
+
+  pushUnit();
+
+  return units.length ? units : [{ name: "pasted snippet", code, lines, meaningfulLines: lines.filter((line) => line.trim().length > 0) }];
+}
+
 export function sanitizeCodeForModel(code: string) {
   return code
     .slice(0, MAX_CODE_CHARS)
@@ -130,7 +163,8 @@ export function analyzeCode(request: RoastRequest): RoastResult {
   const language = request.language || "TypeScript";
   const mode = request.mode || "Brutal Staff Engineer";
   const lines = code.split(/\r?\n/);
-  const meaningfulLines = lines.filter((line) => line.trim().length > 0);
+  const evidenceUnits = splitEvidenceUnits(code);
+  const largestUnit = evidenceUnits.reduce((largest, unit) => (unit.meaningfulLines.length > largest.meaningfulLines.length ? unit : largest), evidenceUnits[0]);
   const charges: Charge[] = [];
   const evidence: string[] = [];
 
@@ -155,22 +189,22 @@ export function analyzeCode(request: RoastRequest): RoastResult {
     /(payment|checkout|invoice|business|price|total|amount)/i,
   ].filter((pattern) => pattern.test(code)).length >= 3;
 
-  if (meaningfulLines.length > LINE_LIMIT) {
+  if (largestUnit.meaningfulLines.length > LINE_LIMIT) {
     addCharge(charges, {
       title: "Large file smell",
       severity: "high",
-      explanation: "This snippet is carrying enough surface area that reviewers will miss important behavior.",
-      evidence: `${meaningfulLines.length} non-empty lines`,
+      explanation: "One imported file is carrying enough surface area that reviewers will miss important behavior.",
+      evidence: `${largestUnit.name}: ${largestUnit.meaningfulLines.length} non-empty lines`,
       fix: "Split by responsibility: validation, orchestration, IO, and presentation should not all live in one file.",
     });
   }
 
-  if (lines.length > 60 && /function|=>|def |func /.test(code)) {
+  if (largestUnit.lines.length > 60 && /function|=>|def |func /.test(largestUnit.code)) {
     addCharge(charges, {
       title: "Very long function",
       severity: "high",
       explanation: "Long functions hide branches, side effects, and error cases from reviewers.",
-      evidence: `${lines.length} lines submitted`,
+      evidence: `${largestUnit.name}: ${largestUnit.lines.length} lines in the largest imported unit`,
       fix: "Extract validation, calculation, persistence, external API calls, and response mapping into named helpers.",
     });
   }
