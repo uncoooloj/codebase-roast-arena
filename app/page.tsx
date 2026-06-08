@@ -242,6 +242,8 @@ export default function Home() {
   const [result, setResult] = useState<RoastResult | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("The Roast");
   const [error, setError] = useState("");
+  const [githubUrl, setGithubUrl] = useState("");
+  const [isFetchingGithub, setIsFetchingGithub] = useState(false);
 
   const severityCounts = useMemo(() => {
     const counts: Record<Charge["severity"], number> = {
@@ -263,13 +265,42 @@ export default function Home() {
 
     for (let index = 0; index < scanSteps.length; index += 1) {
       setActiveStep(index);
-      setProgress(Math.round(((index + 1) / scanSteps.length) * 100));
+      setProgress(Math.round(((index + 1) / scanSteps.length) * 88));
       setLogs((current) => [
         ...current.slice(-7),
         `[${String(index + 1).padStart(2, "0")}] ${scanSteps[index]}`,
       ]);
       playScanTick(soundOn);
       await sleep(340);
+    }
+  }
+
+  async function loadGithubUrl() {
+    if (!githubUrl.trim()) {
+      setError("Paste a public GitHub repo, folder, blob, or raw URL first.");
+      return;
+    }
+
+    setError("");
+    setIsFetchingGithub(true);
+
+    try {
+      const response = await fetch("/api/github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: githubUrl }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not load that GitHub URL.");
+      setCode(data.code);
+      setLanguage(data.language || "TypeScript");
+      setLogs([`[GH] Imported public GitHub evidence from ${githubUrl}`]);
+      setProgress(0);
+      setResult(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "GitHub import failed.");
+    } finally {
+      setIsFetchingGithub(false);
     }
   }
 
@@ -315,7 +346,9 @@ export default function Home() {
 
     try {
       const roastPromise = requestRoast();
-      await Promise.all([runScan(), roastPromise]);
+      await runScan();
+      setProgress(92);
+      setLogs((current) => [...current.slice(-7), "[08] Awaiting judge response..."]);
       const verdict = await roastPromise;
       setResult(verdict);
       setProgress(100);
@@ -348,20 +381,46 @@ export default function Home() {
   return (
     <main className="arena">
       <div className="grid-glow" />
-      <header className="topbar">
-        <div>
-          <p className="kicker">AI prosecutor / static fallback / code trial</p>
+      <header className="topbar arcade-window">
+        <div className="browser-strip">
+          <div className="window-mark">CRA</div>
           <h1>Codebase Roast Arena</h1>
-          <p className="subtitle">Put your code on trial.</p>
+          <nav aria-label="Arcade menu">
+            <span>File</span>
+            <span>Edit</span>
+            <span>View</span>
+            <span>Trial</span>
+            <span>Help</span>
+          </nav>
+          <div className="url-slot">http://localhost:3001/arena</div>
+          <div className="window-buttons" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
         </div>
 
-        <div className="top-actions">
-          <span className={result?.fallbackUsed ? "api-pill fallback" : "api-pill"}>
-            {result ? (result.fallbackUsed ? "Fallback judge" : "OpenAI judge") : "Court awaiting evidence"}
-          </span>
-          <button className="ghost-button" type="button" onClick={() => setSoundOn((current) => !current)}>
-            Sound {soundOn ? "On" : "Off"}
-          </button>
+        <div className="marquee-row">
+          <div className="case-file">
+            <span>Case:</span>
+            <strong>{language.toLowerCase()}_logic.{language === "Python" ? "py" : language === "Go" ? "go" : language === "PHP" ? "php" : "ts"}</strong>
+          </div>
+          <div className="maze-chase" aria-hidden="true">
+            <span className="pacman" />
+            <span className="pellets" />
+            <span className="ghost ghost-pink" />
+            <span className="trial-marquee">{isLoading ? "Trial in progress" : result ? "Verdict logged" : "Insert code to start"}</span>
+            <span className="ghost ghost-cyan" />
+            <span className="pellets" />
+          </div>
+          <div className="top-actions">
+            <span className={result?.fallbackUsed ? "api-pill fallback" : "api-pill"}>
+              {result ? (result.fallbackUsed ? "Local judge" : "OpenAI judge") : "Court idle"}
+            </span>
+            <button className="ghost-button" type="button" onClick={() => setSoundOn((current) => !current)}>
+              Sound {soundOn ? "On" : "Off"}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -386,6 +445,18 @@ export default function Home() {
             spellCheck={false}
             aria-label="Code input"
           />
+
+          <div className="github-intake">
+            <input
+              value={githubUrl}
+              onChange={(event) => setGithubUrl(event.target.value)}
+              placeholder="https://github.com/owner/repo or /blob/main/file.ts"
+              aria-label="GitHub URL"
+            />
+            <button type="button" onClick={loadGithubUrl} disabled={isFetchingGithub}>
+              {isFetchingGithub ? "Loading GitHub..." : "Load GitHub URL"}
+            </button>
+          </div>
 
           <div className="sample-row">
             <button type="button" onClick={() => setCode(cursedCheckout)}>
@@ -421,7 +492,7 @@ export default function Home() {
           </div>
 
           <button className="trial-button" type="button" onClick={beginTrial} disabled={isLoading}>
-            {isLoading ? "Trial in progress" : "Begin Trial"}
+            {isLoading ? "Trial in progress" : "Insert Coin / Begin Trial"}
           </button>
 
           {error ? <div className="error-banner">{error}</div> : null}
@@ -455,6 +526,10 @@ export default function Home() {
                 <strong>{result || isLoading ? "generated" : index === 0 ? "queued" : "pending"}</strong>
               </div>
             ))}
+            <div className="coin-counter">
+              <span>Roast coins</span>
+              <strong>{result ? String(Math.max(0, 100 - result.overallScore) * 320).padStart(6, "0") : "000000"}</strong>
+            </div>
           </div>
         </section>
 
@@ -462,7 +537,7 @@ export default function Home() {
           {result ? (
             <>
               <div className="verdict-banner">
-                <span>Final verdict</span>
+                <span><i className="mini-pac" /> Verdict board</span>
                 <strong>{result.finalVerdict}</strong>
               </div>
 
